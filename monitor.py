@@ -5,7 +5,7 @@ from email.mime.text import MIMEText
 import os
 import json
 
-# 👉 在这里加你要监控的两个网站
+# 要监控的网站
 URLS = [
     "https://www.psoas.fi/en/locations/puistokatu-6/",
     "https://www.psoas.fi/en/vacant-apartments/"
@@ -13,46 +13,69 @@ URLS = [
 
 def get_hash(url):
     headers = {"User-Agent": "Mozilla/5.0"}
-    response = requests.get(url, headers=headers)
-    return hashlib.md5(response.text.encode()).hexdigest()
+    try:
+        response = requests.get(url, headers=headers, timeout=10)
+        response.raise_for_status()
+        return hashlib.md5(response.text.encode()).hexdigest()
+    except Exception as e:
+        print(f"获取网页 {url} 失败: {e}")
+        return None
 
 def send_email(changed_urls):
-    msg = MIMEText("这些网页发生变化：\n\n" + "\n".join(changed_urls))
-    msg['Subject'] = '网页变化提醒'
-    msg['From'] = os.environ['EMAIL_USER']
-    msg['To'] = os.environ['EMAIL_USER']
+    # 使用 .get() 避免 KeyError
+    user = os.environ.get('EMAIL_USER')
+    password = os.environ.get('EMAIL_PASS')
 
-    with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
-        server.login(os.environ['EMAIL_USER'], os.environ['EMAIL_PASS'])
-        server.send_message(msg)
+    if not user or not password:
+        print("❌ 错误: 环境变量 EMAIL_USER 或 EMAIL_PASS 未设置！")
+        return
+
+    msg = MIMEText("这些网页发生变化：\n\n" + "\n".join(changed_urls))
+    msg['Subject'] = 'PSOAS 房源变化提醒'
+    msg['From'] = user
+    msg['To'] = user
+
+    try:
+        with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
+            server.login(user, password)
+            server.send_message(msg)
+            print("✅ 邮件发送成功！")
+    except Exception as e:
+        print(f"❌ 邮件发送失败: {e}")
 
 def main():
     changed = []
+    hash_file = "last_hash.txt"
 
     # 读取旧数据
     try:
-        with open("last_hash.txt", "r") as f:
+        with open(hash_file, "r") as f:
             old_hashes = json.load(f)
-    except:
+    except (FileNotFoundError, json.JSONDecodeError):
         old_hashes = {}
 
     new_hashes = {}
 
-    # 遍历所有网站
     for url in URLS:
         new_hash = get_hash(url)
-        new_hashes[url] = new_hash
+        if new_hash:
+            new_hashes[url] = new_hash
+            # 如果旧数据中已有该 URL 且哈希值不同
+            if url in old_hashes and old_hashes[url] != new_hash:
+                changed.append(url)
+        else:
+            # 如果这次获取失败，保留上次的哈希值
+            if url in old_hashes:
+                new_hashes[url] = old_hashes[url]
 
-        # 如果旧数据存在且不同 → 说明变化
-        if url in old_hashes and old_hashes[url] != new_hash:
-            changed.append(url)
-
-    # 如果有变化 → 发邮件
     if changed:
+        print(f"检测到变化: {changed}")
         send_email(changed)
+    else:
+        print("暂无变化。")
 
     # 保存新数据
-    with open("last_hash.txt", "w") as f:
+    with open(hash_file, "w") as f:
         json.dump(new_hashes, f)
 
 if __name__ == "__main__":
