@@ -1,1 +1,1 @@
-{"https://www.psoas.fi/en/locations/puistokatu-6/": "bac061ad911c64423dcc53c4cbf03aa1", "https://www.psoas.fi/en/vacant-apartments/": "545ad7ed079fdd9756d45945f744688b"}
+{"https://www.psoas.fi/en/locations/puistokatu-6/": "7493ccec0ba60526332115aeae313327", "https://www.psoas.fi/en/vacant-apartments/": "c92bbbb68132d9afa941e6f5ae2ac733"}
