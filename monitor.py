@@ -4,7 +4,7 @@ import smtplib
 from email.mime.text import MIMEText
 import os
 
-URL = "https://example.com"
+URL = "https://www.psoas.fi/en/locations/puistokatu-6/"
 
 def get_page_hash():
     response = requests.get(URL)
