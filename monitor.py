@@ -3,16 +3,21 @@ import hashlib
 import smtplib
 from email.mime.text import MIMEText
 import os
+import json
 
-URL = "https://www.psoas.fi/en/locations/puistokatu-6/"
+# 👉 在这里加你要监控的两个网站
+URLS = [
+    "https://www.psoas.fi/en/locations/puistokatu-6/",
+    "https://www.psoas.fi/en/vacant-apartments/"
+]
 
-def get_page_hash():
-    response = requests.get(URL)
-    content = response.text
-    return hashlib.md5(content.encode()).hexdigest()
+def get_hash(url):
+    headers = {"User-Agent": "Mozilla/5.0"}
+    response = requests.get(url, headers=headers)
+    return hashlib.md5(response.text.encode()).hexdigest()
 
-def send_email():
-    msg = MIMEText("网页发生变化！")
+def send_email(changed_urls):
+    msg = MIMEText("这些网页发生变化：\n\n" + "\n".join(changed_urls))
     msg['Subject'] = '网页变化提醒'
     msg['From'] = os.environ['EMAIL_USER']
     msg['To'] = os.environ['EMAIL_USER']
@@ -22,19 +27,33 @@ def send_email():
         server.send_message(msg)
 
 def main():
-    new_hash = get_page_hash()
+    changed = []
 
+    # 读取旧数据
     try:
         with open("last_hash.txt", "r") as f:
-            old_hash = f.read()
+            old_hashes = json.load(f)
     except:
-        old_hash = ""
+        old_hashes = {}
 
-    if old_hash and new_hash != old_hash:
-        send_email()
+    new_hashes = {}
 
+    # 遍历所有网站
+    for url in URLS:
+        new_hash = get_hash(url)
+        new_hashes[url] = new_hash
+
+        # 如果旧数据存在且不同 → 说明变化
+        if url in old_hashes and old_hashes[url] != new_hash:
+            changed.append(url)
+
+    # 如果有变化 → 发邮件
+    if changed:
+        send_email(changed)
+
+    # 保存新数据
     with open("last_hash.txt", "w") as f:
-        f.write(new_hash)
+        json.dump(new_hashes, f)
 
 if __name__ == "__main__":
     main()
