@@ -2,14 +2,14 @@ name: Monitor Website
 
 on:
   schedule:
-    - cron: "*/5 * * * *"   # 每 5 分钟自动运行
-  workflow_dispatch:        # 支持手动点击按钮运行
+    - cron: "*/5 * * * *"   # 每5分钟运行一次
+  workflow_dispatch:
 
 jobs:
   monitor:
     runs-on: ubuntu-latest
     permissions:
-      contents: write       # 必须有写入权限才能保存 last_hash.txt
+      contents: write       # 确保有权限更新 last_hash.txt
 
     steps:
       - name: Checkout code
@@ -21,11 +21,11 @@ jobs:
           python-version: "3.10"
 
       - name: Install dependencies
-        run: pip install requests
+        # ⭐ 修复点：在这里添加 beautifulsoup4
+        run: pip install requests beautifulsoup4
 
       - name: Run monitor script
         env:
-          # 关键：从 GitHub Secrets 注入环境变量
           EMAIL_USER: ${{ secrets.EMAIL_USER }}
           EMAIL_PASS: ${{ secrets.EMAIL_PASS }}
         run: python monitor.py
@@ -35,9 +35,6 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git add last_hash.txt || true
-          # 只有当文件确实改变时才提交，防止 workflow 报错
-          if git commit -m "Update last_hash.txt"; then
+          if git commit -m "Update state"; then
             git push
-          else
-            echo "No changes in hash file, skipping push."
           fi
