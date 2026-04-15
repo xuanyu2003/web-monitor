@@ -1,6 +1,5 @@
 name: Monitor Website
 
-# refresh scheduler
 on:
   schedule:
     - cron: "*/5 * * * *"   # 每5分钟
