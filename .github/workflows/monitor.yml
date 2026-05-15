@@ -1,10 +1,7 @@
 name: Monitor Website
 
 on:
-  schedule:
-    # 建议改为每 15 分钟，并避开整点（例如在第 7, 22, 37, 52 分钟运行）
-    # 这样能有效减少 GitHub Actions 的延迟排队
-    - cron: "7,22,37,52 * * * *"
+
   workflow_dispatch: # 保留手动触发按钮
 
 jobs:
